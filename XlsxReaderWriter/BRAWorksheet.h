@@ -28,14 +28,15 @@
 
 //Image
 - (BRAImage *)imageForCellReference:(NSString *)cellReference;
-- (BRAWorksheetDrawing *)addImage:(BRANativeImage *)image betweenCellsReferenced:(NSString *)firstCellReference and:(NSString *)secondCellReference withInsets:(BRANativeEdgeInsets)insets preserveTransparency:(BOOL)transparency;
-- (BRAWorksheetDrawing *)addImage:(BRANativeImage *)image inCellReferenced:(NSString *)cellReference withOffset:(CGPoint)offset size:(CGSize)size preserveTransparency:(BOOL)transparency;
-- (BRAWorksheetDrawing *)addImage:(BRANativeImage *)image inFrame:(CGRect)frame preserveTransparency:(BOOL)transparency;
+- (BRAWorksheetDrawing *)addImage:(UIImage *)image betweenCellsReferenced:(NSString *)firstCellReference and:(NSString *)secondCellReference withInsets:(UIEdgeInsets)insets preserveTransparency:(BOOL)transparency;
+- (BRAWorksheetDrawing *)addImage:(UIImage *)image inCellReferenced:(NSString *)cellReference withOffset:(CGPoint)offset size:(CGSize)size preserveTransparency:(BOOL)transparency;
+- (BRAWorksheetDrawing *)addImage:(UIImage *)image inFrame:(CGRect)frame preserveTransparency:(BOOL)transparency;
 
 //Column
 
 //Rows
 - (void)addRowAt:(NSInteger)rowIndex;
+- (void)addRowsAt:(NSInteger)rowIndex count:(NSInteger)numberOfRowsToAdd withHeight:(NSInteger)height;
 - (void)addRowsAt:(NSInteger)rowIndex count:(NSInteger)numberOfRowsToAdd;
 - (void)removeRow:(NSInteger)rowIndex;
 - (void)removeRow:(NSInteger)rowIndex count:(NSInteger)numberOfRowsToRemove;

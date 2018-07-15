@@ -10,7 +10,6 @@
 #import "BRAColumn.h"
 #import "BRARow.h"
 #import "BRARelationships.h"
-#import "BRAPlatformSpecificDefines.h"
 
 @implementation BRAWorksheet
 
@@ -278,10 +277,10 @@
     return nil;
 }
 
-- (BRAWorksheetDrawing *)addImage:(BRANativeImage *)image betweenCellsReferenced:(NSString *)firstCellReference and:(NSString *)secondCellReference
-      withInsets:(BRANativeEdgeInsets)insets preserveTransparency:(BOOL)transparency {
+- (BRAWorksheetDrawing *)addImage:(UIImage *)image betweenCellsReferenced:(NSString *)firstCellReference and:(NSString *)secondCellReference
+      withInsets:(UIEdgeInsets)insets preserveTransparency:(BOOL)transparency {
     
-    NSData *dataRepresentation = transparency ? BRANativeImagePNGRepresentation(image) : BRANativeImageJPEGRepresentation(image, .9);
+    NSData *dataRepresentation = transparency ? UIImagePNGRepresentation(image) : UIImageJPEGRepresentation(image, .9);
     
     BRAImage *newImage = [[BRAImage alloc] initWithDataRepresentation:dataRepresentation
                                                         forRelationId:[_drawings.relationships relationshipIdForNewRelationship]
@@ -298,8 +297,8 @@
     return [self.drawings addDrawingForImage:newImage withAnchor:anchor];
 }
 
-- (BRAWorksheetDrawing *)addImage:(BRANativeImage *)image inCellReferenced:(NSString *)cellReference withOffset:(CGPoint)offset size:(CGSize)size preserveTransparency:(BOOL)transparency {
-    NSData *dataRepresentation = transparency ? BRANativeImagePNGRepresentation(image) : BRANativeImageJPEGRepresentation(image, .9);
+- (BRAWorksheetDrawing *)addImage:(UIImage *)image inCellReferenced:(NSString *)cellReference withOffset:(CGPoint)offset size:(CGSize)size preserveTransparency:(BOOL)transparency {
+    NSData *dataRepresentation = transparency ? UIImagePNGRepresentation(image) : UIImageJPEGRepresentation(image, .9);
     
     BRAImage *newImage = [[BRAImage alloc] initWithDataRepresentation:dataRepresentation
                                                         forRelationId:[_drawings.relationships relationshipIdForNewRelationship]
@@ -315,8 +314,8 @@
     return [self.drawings addDrawingForImage:newImage withAnchor:anchor];
 }
 
-- (BRAWorksheetDrawing *)addImage:(BRANativeImage *)image inFrame:(CGRect)frame preserveTransparency:(BOOL)transparency {
-    NSData *dataRepresentation = transparency ? BRANativeImagePNGRepresentation(image) : BRANativeImageJPEGRepresentation(image, .9);
+- (BRAWorksheetDrawing *)addImage:(UIImage *)image inFrame:(CGRect)frame preserveTransparency:(BOOL)transparency {
+    NSData *dataRepresentation = transparency ? UIImagePNGRepresentation(image) : UIImageJPEGRepresentation(image, .9);
     
     BRAImage *newImage = [[BRAImage alloc] initWithDataRepresentation:dataRepresentation
                                                         forRelationId:[_drawings.relationships relationshipIdForNewRelationship]
@@ -463,6 +462,107 @@
     }
 }
 
+- (void)addRowsAt:(NSInteger)rowIndex count:(NSInteger)numberOfRowsToAdd withHeight:(NSInteger) height {
+  //-----Adjust worksheet dimension
+  _dimension.bottomRowIndex = MAX(numberOfRowsToAdd + _dimension.bottomRowIndex, rowIndex + numberOfRowsToAdd - 1);
+  
+  //-----Adjust mergeCells
+  for (BRAMergeCell *mergeCell in _mergeCells) {
+    //If rowIndex is above top mergeCell, change top index
+    if (rowIndex <= mergeCell.topRowIndex) {
+      mergeCell.topRowIndex += numberOfRowsToAdd;
+    }
+    
+    //If rowIndex is above bottom mergeCell, change bottom index
+    if (rowIndex <= mergeCell.bottomRowIndex) {
+      mergeCell.bottomRowIndex += numberOfRowsToAdd;
+    }
+  }
+  
+  //-----Add cells and rows
+  BRARow *currentRow = nil;
+  NSArray *currentRowCells = nil;
+  NSMutableArray *newRows = @[].mutableCopy;
+  BRARow *newRow = nil;
+  BRACell *newCell = nil;
+  NSInteger maxRowIndex = 0;
+  
+  for (NSInteger i = 0; i < [_rows count]; i++) {
+    currentRow = _rows[i];
+    maxRowIndex = MAX(maxRowIndex, currentRow.rowIndex);
+    
+    if (currentRow.rowIndex == rowIndex) {
+      currentRowCells = currentRow.cells;
+      
+      for (NSInteger jj = 0; jj < numberOfRowsToAdd; jj++) {
+        newRow = [[BRARow alloc] initWithRowIndex:rowIndex + jj inWorksheet:self];
+        if (height > 0) {
+          newRow.height = height;
+          newRow.customHeight = YES;
+        }
+        for (NSInteger ii = 0; ii < [currentRowCells count]; ii++) {
+          NSInteger columnIndex = [BRAColumn columnIndexForCellReference:[currentRowCells[ii] reference]];
+          
+          newCell = [[BRACell alloc] initWithReference:[BRACell cellReferenceForColumnIndex:columnIndex andRowIndex:rowIndex + jj]
+                                            andStyleId:[currentRowCells[ii] styleId]
+                                           inWorksheet:self];
+          
+          [newRow addCell:newCell];
+          
+          [newCell setCellFill:nil];
+        }
+        
+        [newRows addObject:newRow];
+        
+      }
+      
+      currentRow.rowIndex += numberOfRowsToAdd;
+      
+    } else if (currentRow.rowIndex > rowIndex) {
+      currentRow.rowIndex += numberOfRowsToAdd;
+    }
+  }
+  
+  if (rowIndex > maxRowIndex) {
+    currentRowCells = currentRow.cells;
+    
+    for (NSInteger jj = 0; jj < numberOfRowsToAdd; jj++) {
+      newRow = [[BRARow alloc] initWithRowIndex:rowIndex + jj inWorksheet:self];
+      if (height > 0) {
+        newRow.height = height;
+        newRow.customHeight = YES;
+      }
+      
+      for (NSInteger ii = 0; ii < [currentRowCells count]; ii++) {
+        NSInteger columnIndex = [BRAColumn columnIndexForCellReference:[currentRowCells[ii] reference]];
+        
+        newCell = [[BRACell alloc] initWithReference:[BRACell cellReferenceForColumnIndex:columnIndex andRowIndex:rowIndex + jj]
+                                          andStyleId:[currentRowCells[ii] styleId]
+                                         inWorksheet:self];
+        
+        [newRow addCell:newCell];
+        
+        [newCell setCellFill:nil];
+      }
+      
+      [newRows addObject:newRow];
+    }
+    
+  }
+  
+  if (newRows.count > 0) {
+    NSIndexSet *indexSet = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(rowIndex, numberOfRowsToAdd)];
+    if (rowIndex > maxRowIndex) {
+      [_rows addObjectsFromArray:newRows];
+    } else {
+      [_rows insertObjects:newRows atIndexes:indexSet];
+    }
+    
+    [_calcChain didAddRowsAtIndexes:indexSet];
+    [_drawings didAddRowsAtIndexes:indexSet];
+    [_comments didAddRowsAtIndexes:indexSet];
+  }
+}
 
 - (void)removeRow:(NSInteger)rowIndex {
     [self removeRow:rowIndex count:1];
